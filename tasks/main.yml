@@ -1,0 +1,24 @@
+---
+- name: Create temporary directory to store related files
+  tempfile:
+    state: directory
+    suffix: graylog
+  register: graylog_temp_dir
+
+- name: Interpolate Ansible variables
+  template:
+    src: docker-compose.yml.j2
+    dest: "{{ graylog_temp_dir.path }}/docker-compose.yml"
+  when: "inventory_hostname == groups['integr8-docker-swarm-manager'][0]"
+
+- name: Deploy graylog in Swarm
+  command: 'docker stack deploy --compose-file {{ graylog_temp_dir.path }}/docker-compose.yml graylog'
+  when: "inventory_hostname == groups['integr8-docker-swarm-manager'][0]"
+
+- name: Record Traefik DNS
+  ara_record:
+    key: "graylog_host"
+    value: "http://{{ graylog_host }}"
+    type: url
+  tags:
+    - skip_ansible_lint

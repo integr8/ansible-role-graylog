@@ -1,0 +1,5 @@
+---
+graylog_docker_image: "graylog/graylog:3.0.2"
+mongo_docker_image: "mongo:3"
+elasticsearch_docker_image: "elasticsearch:6.6.2"
+graylog_host: "graylog.integr8.me"

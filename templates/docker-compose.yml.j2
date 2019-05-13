@@ -1,0 +1,75 @@
+version: '3.7'
+
+services:
+  mongodb:
+    image: "{{ mongo_docker_image }}"
+    networks:
+      - integr8
+    volumes:
+      - graylog_mongodb_data:/data/db
+    environment:
+      - "TZ=America/Sao_Paulo"
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == worker
+
+  elasticsearch:
+    image: "{{ elasticsearch_docker_image }}"
+    networks:
+      - integr8
+    ports:
+      - 9200
+      - 9300
+    volumes:
+      - graylog_elasticsearch_data:/usr/share/elasticsearch/data
+    environment:
+      - http.host=0.0.0.0
+      - transport.host=localhost
+      - network.host=0.0.0.0
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    deploy:
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == worker
+
+  graylog:
+    image: "{{ graylog_docker_image }}"
+    networks:
+      - integr8
+    environment:
+      - "TZ=America/Sao_Paulo"
+      - "GRAYLOG_HTTP_EXTERNAL_URI=http://{{ graylog_host }}/"
+      - "GRAYLOG_MONGODB_URI=mongodb://mongodb/graylog"
+    ports:
+      - 9000
+      - 1514
+      - 12201:12201/udp
+      - 514/udp
+    links:
+      - elasticsearch:elasticsearch
+    depends_on:
+      - mongodb
+      - elasticsearch
+    deploy:
+      labels:
+        - traefik.enable=true
+        - traefik.backend=graylog
+        - traefik.frontend.rule=Host:{{ graylog_host }}
+        - traefik.port=9000
+        - traefik.docker.network=integr8
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == worker
+
+networks:
+  integr8:
+    external: true
+    name: integr8
+
+volumes:
+  graylog_elasticsearch_data:
+  graylog_mongodb_data:
